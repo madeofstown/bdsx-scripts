@@ -143,6 +143,11 @@ export function sendModalForm(networkIdentifier: NetworkIdentifier, form: object
     packet.setCxxString(JSON.stringify(form), 0x30);
     sendPacket(networkIdentifier, packet);
     packet.dispose();
+    setTimeout(function(){
+        let update = createPacket(PacketId.SetTitle)
+        sendPacket(networkIdentifier, update);
+        update.dispose();
+    }, 100);
     formCallback[formId] = callback;
 }
 
