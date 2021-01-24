@@ -1,4 +1,4 @@
-
+// Incomplete
 import { Actor, command, NetworkIdentifier } from 'bdsx';
 import fs = require('fs');
 import { connectionList } from './playerlist';
