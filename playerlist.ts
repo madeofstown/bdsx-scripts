@@ -38,7 +38,15 @@ netevent.after(PacketId.Login).on((ptr, networkIdentifier, packetId) => {
         connectionList.nXNet.set(networkIdentifier, username);
         connectionList.nXXid.set(username, xuid);
         connectionList.nXXid.set(xuid, username);
-        system.listenForEvent(ReceiveFromMinecraftServer.EntityCreated, ev => {
+        
+        });
+        console.log(`[SCRIPT INFO] ${username}|${xuid} JOINED from ${ip}`);
+        console.log(`[SCRIPT INFO] ${username} ADDED to CONNECTION LIST`);
+        console.log(connectionList.nXNet);
+        console.log(connectionList.nXXid);
+    }
+});
+system.listenForEvent(ReceiveFromMinecraftServer.EntityCreated, ev => {
             const actor = Actor.fromEntity(ev.data.entity);
             let entity = ev.data.entity;
             // console.log(entity)
@@ -49,14 +57,6 @@ netevent.after(PacketId.Login).on((ptr, networkIdentifier, packetId) => {
                 connectionList.n2Ent.set(playerName?.data.name, entity)
                 console.log(connectionList.n2Ent);
             }
-        });
-        console.log(`[SCRIPT INFO] ${username}|${xuid} JOINED from ${ip}`);
-        console.log(`[SCRIPT INFO] ${username} ADDED to CONNECTION LIST`);
-        console.log(connectionList.nXNet);
-        console.log(connectionList.nXXid);
-    }
-});
-
 
 //Read Disconnect Event and Remove Player From Connection List
 NetworkIdentifier.close.on(networkIdentifier => {
