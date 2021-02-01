@@ -1,4 +1,3 @@
-/// <reference types="minecraft-scripting-types-server" />
 //------------------------------------------------------------------------------//
 //                           Map NAME <--> NetworkID                            //
 //                               script for BDSX                                //
@@ -38,8 +37,6 @@ netevent.after(PacketId.Login).on((ptr, networkIdentifier, packetId) => {
         connectionList.nXNet.set(networkIdentifier, username);
         connectionList.nXXid.set(username, xuid);
         connectionList.nXXid.set(xuid, username);
-        
-        });
         console.log(`[SCRIPT INFO] ${username}|${xuid} JOINED from ${ip}`);
         console.log(`[SCRIPT INFO] ${username} ADDED to CONNECTION LIST`);
         console.log(connectionList.nXNet);
@@ -57,6 +54,7 @@ system.listenForEvent(ReceiveFromMinecraftServer.EntityCreated, ev => {
                 connectionList.n2Ent.set(playerName?.data.name, entity)
                 console.log(connectionList.n2Ent);
             }
+});
 
 //Read Disconnect Event and Remove Player From Connection List
 NetworkIdentifier.close.on(networkIdentifier => {
@@ -68,4 +66,4 @@ NetworkIdentifier.close.on(networkIdentifier => {
     connectionList.nXXid.delete(xuid);
     connectionList.n2Ent.delete(username);
     console.log(`[SCRIPT INFO] ${username} REMOVED from CONNECTION LIST`);
-});
+})
