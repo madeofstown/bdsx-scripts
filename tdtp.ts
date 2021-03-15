@@ -1,4 +1,3 @@
-/// <reference types="minecraft-scripting-types-server" />
 //------------------------------------------------------------------------------//
 //                          Transdimenstion Teleport                            //
 //                               script for BDSX                                //
@@ -17,41 +16,44 @@
 // https://github.com/Rjlintkh/bdsx-scripts/blob/main/scripts/minecraftFunctions.ts  //
 //------------------------------------------------------------------------------//
 
-import { Actor, command, NativeModule, RawTypeId } from "bdsx";
+import { pdb } from "bdsx/core";
+import { SYMOPT_UNDNAME } from "bdsx/common";
+import { ProcHacker } from "bdsx/prochacker";
+import { Actor, command, DimensionId, RawTypeId } from "bdsx";
+import { Vec3 } from "bdsx/bds/blockpos";
 import { connectionList } from "./playerlist";
-import { makefunc } from "bdsx/core";
-import { SetTitlePacket } from "bdsx/bds/packets";
 
+// Open PDB and look for teleport function
+pdb.setOptions(SYMOPT_UNDNAME);
+const hacker = ProcHacker.load("../pdbcache.ini", [
+    "TeleportCommand::teleport"
+]);
+pdb.setOptions(0);
+pdb.close();
+const _tdtp = hacker.js("TeleportCommand::teleport", RawTypeId.Void, null, Actor, Vec3, Vec3, RawTypeId.Int32);
 
-let system: any = server.registerSystem(0,0);
-export const changeDimension = makefunc.js(NativeModule.get(null).add(0xCD3FF0),RawTypeId.Void, null, Actor, RawTypeId.Int32, RawTypeId.Boolean);
+// Teleport function
+export function tdTeleport(playerName: string, dimensionId: DimensionId = DimensionId.Overworld, x: number, y: number, z:number): void {
+    let _netId = connectionList.nXNet.get(playerName);
+    let _actor: Actor = _netId.getActor();
+    let pos = new Vec3(true);
+    pos.x = x;
+    pos.y = y;
+    pos.z = z;
 
-// EXPORTED tdTeleport function
-export function tdTeleport(playerName: string, dimId: number/* 0=overworld, 1=nether, 2=end */, x: any, y: any, z: any) {
-    let netId = connectionList.nXNet.get(playerName);
-    let actor = netId.getActor();
-    changeDimension(actor, dimId, false);
-    
-    setTimeout(function(){
-        system.executeCommand(`execute ${playerName} ~ ~ ~ tp @s ${x} ${y} ${z}`, () => {});
-        let update = SetTitlePacket.create()
-        update.sendTo(netId, 0)
-        update.dispose();
-    }, 500);
-    return 0;
+    _tdtp(_actor, pos, new Vec3(true), dimensionId);
 }
 
-
-// Hooking '/tdtp <dimId:{0=overworld, 1=nether, 2=end}> <xPos> <yPos> <zPos>' command  
+// Hooking '/tdtp <dimId:{0=overworld, 1=nether, 2=end}> <xPos> <yPos> <zPos>' command
 command.hook.on((command, originName) => {
     if (command.startsWith('/tdtp')){
         let cmdData = command.split(' ');
         let dimId = parseInt(cmdData[1]);
-        let xPos = cmdData[2];
-        let yPos = cmdData[3];
-        let zPos = cmdData[4];
+        let xPos: number = parseFloat(cmdData[2]);
+        let yPos: number = parseFloat(cmdData[3]);
+        let zPos: number = parseFloat(cmdData[4]);
         console.log('[COMMAND HOOK] /tdtp ' + dimId + ' ' + xPos + ' ' + yPos + ' ' + zPos + ' @' + originName);
         tdTeleport(originName, dimId, xPos, yPos, zPos);
-        return 0;       
-    }  
+        return 0;
+    }
 });

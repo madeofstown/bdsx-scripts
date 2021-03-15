@@ -1,8 +1,10 @@
-// Incomplete
-import { Actor, command, NetworkIdentifier } from 'bdsx';
+
+import { command, DimensionId } from 'bdsx';
 import fs = require('fs');
 import { connectionList } from './playerlist';
 import { tdTeleport } from './tdtp';
+import colors = require('colors');
+import { Dimension } from 'bdsx/bds/dimension';
 
 let dbFile = "warplist.json";
 let warpDB: any = []
@@ -22,73 +24,148 @@ fs.readFile(dbFile, (err, data: any) =>{
 // Save Database File on Server Shutdown
 system.shutdown = function(){
     let filedata = JSON.stringify(warpDB);
-        fs.writeFile(dbFile, filedata, () => {
-            console.log('[WARP LIST] Database ' + dbFile + ' SAVED');
-            console.log(filedata);
-            console.log(warpDB);    
-        });
+    fs.writeFile(dbFile, filedata, () => {
+        console.log('[WARP LIST] Database ' + dbFile + ' SAVED');
+        console.log(filedata);
+        console.log(warpDB);
+    });
 }
 
 // Hook Commands
 command.hook.on((cmdString: string, originName: any) =>{
+    // /sethome
     if (cmdString.startsWith('/sethome')){
-        // 
-        let originActor = connectionList.nXNet.get(originName).getActor();
-        let originEntity = connectionList.n2Ent.get(originName);
-        let originPosition = system.getComponent(originEntity, MinecraftComponent.Position)
-        let originXuid = connectionList.nXXid.get(originName);
-        let dimId = originActor.getDimension();
-        let xPos = originPosition!.data.x;
-        let yPos = originPosition!.data.y;
-        let zPos = originPosition!.data.z;
-        let dbObject = warpDB.find((obj: { xuid: string; }) => obj.xuid == originXuid);
-        let warpEntry = new WarpDBEntry('.home', dimId, xPos, yPos, zPos)
-        // 
-        if (dbObject != undefined){
-            let dbIndex = warpDB.indexOf(dbObject);
-            let warpObject = dbObject.warp.find((obj: { name: string; }) => obj.name == '.home');
-            if (warpObject != undefined){
-                console.log('Existing: ' + warpObject.name);
-                let warpIndex = warpDB[dbIndex].warp.indexOf(warpObject);
-                warpDB[dbIndex].warp[warpIndex] = warpEntry;
-                console.log(JSON.stringify(warpDB));
-                console.log(warpDB);
-                return 0;
-            } else {
-                warpDB[dbIndex].warp.push(warpEntry);
-                console.log(JSON.stringify(warpDB));
-                console.log(warpDB);
-                return 0;
-            }
-        } else {
-            let playerEntry = new PlayerDBEntry(originXuid, originName);
-            playerEntry.addWarp('.home', dimId, xPos, yPos, xPos);
-            warpDB.push(playerEntry);
-        }
-        console.log(JSON.stringify(warpDB));
+        let warpName: string = '.home'
+        warpSet(originName, warpName);
     }
+    // /home
     if (cmdString.startsWith('/home')){
-        // 
-        let originActor = connectionList.nXNet.get(originName).getActor();
-        let originXuid = connectionList.nXXid.get(originName);
-        let oiriginDimId = originActor.getDimension();
-        let dbObject = warpDB.find((obj: { xuid: string; }) => obj.xuid == originXuid);
-        // 
-        if (dbObject != undefined){
-            let dbIndex = warpDB.indexOf(dbObject);
-            let warpObject = dbObject.warp.find((obj: { name: string; }) => obj.name == '.home');
-            console.log(warpObject)
-            if (warpObject != undefined){
-                if (warpObject.dimId == oiriginDimId){
-                    system.executeCommand(`tp ${originName} ${warpObject.x} ${warpObject.y} ${warpObject.z}`, cb => {});
-                    return 0; 
-                } else {
-                    tdTeleport(originName, warpObject.dimId, warpObject.x, warpObject.y, warpObject.z);
-                }
-            }
-        }
+        let warpName: string = '.home'
+        warpTo(originName, warpName)
+    }
+    // /warp set <warpName>
+    if (cmdString.startsWith('/warp set')) {
+        let warpName: string = splitAfter(cmdString, 2);
+        console.log(warpName);
+        warpSet(originName, warpName);
+    }
+    // /warp to <warpName>
+    if (cmdString.startsWith('/warp to')) {
+        let warpName: string = splitAfter(cmdString, 2);
+        warpTo(originName, warpName);
+    }
+    // /warp del <warpName>
+    if (cmdString.startsWith('/warp del')) {
+        let warpName: string = splitAfter(cmdString, 2);
+        warpDel(originName, warpName);
     }
 });
+
+// Functions
+function tellRaw(playerName: string, text: string){
+    system.executeCommand(`/tellraw ${playerName} {"rawtext":[{"text":"${text}"}]}`, () => {});
+}
+
+function splitAfter(string: string, index: number, separator: string = ' '){
+    let stringSplit = string.split(separator);
+    let stringArray = [];
+    for (let i = index; i < stringSplit.length; i++){
+        stringArray.push(stringSplit[i])
+    }
+    let stringNew: string = stringArray.join(separator);
+    return stringNew
+}
+
+function warpSet(playerName: string, warpName: string){
+    let originActor = connectionList.nXNet.get(playerName).getActor();
+    let originEntity = connectionList.n2Ent.get(playerName);
+    let originPosition = system.getComponent(originEntity, "minecraft:position");
+    let originXuid = connectionList.nXXid.get(playerName);
+    let dimId = originActor.getDimension();
+    let xPos = originPosition!.data.x;
+    let yPos = originPosition!.data.y;
+    let zPos = originPosition!.data.z;
+    let dbObject = warpDB.find((obj: { xuid: string; }) => obj.xuid == originXuid);
+    let warpEntry = new WarpDBEntry(warpName, dimId, xPos, yPos, zPos);
+
+    if (dbObject != undefined){
+        let dbIndex = warpDB.indexOf(dbObject);
+        let warpObject = dbObject.warp.find((obj: { name: string; }) => obj.name == warpName);
+
+        if (warpObject != undefined){
+            tellRaw(playerName, `§gExisting §4${warpObject.name}§g: §4${DimensionId[warpObject.dimId]} §g@ §4${warpObject.x}§g, §4${warpObject.y}§g, §4${warpObject.z}`);
+            tellRaw(playerName, `§gOverwriting with: §4${DimensionId[dimId]} §g@ §4${xPos}§g, §4${yPos}§g, §4${zPos}`);
+            let warpIndex = warpDB[dbIndex].warp.indexOf(warpObject);
+            warpDB[dbIndex].warp[warpIndex] = warpEntry;
+
+        } else {
+            tellRaw(playerName, `§2${playerName} §gset new warp §4${warpName}§g:\n§4${DimensionId[dimId]} §g@ §4${xPos}§g, §4${yPos}§g, §4${zPos}`);
+            warpDB[dbIndex].warp.push(warpEntry);
+        }
+
+    } else {
+        tellRaw(playerName, `§2${playerName} §gset new warp §4${warpName}§g:\n§4${DimensionId[dimId]} §g@ §4${xPos}§g, §4${yPos}§g, §4${zPos}`);
+        let playerEntry = new PlayerDBEntry(originXuid, playerName);
+        playerEntry.addWarp(warpName, dimId, xPos, yPos, xPos);
+        warpDB.push(playerEntry);
+    }
+
+    let filedata = JSON.stringify(warpDB);
+    fs.writeFile(dbFile, filedata, () => {
+        console.log('[WARP LIST] Database ' + dbFile + ' SAVED');
+        console.log(filedata);
+        console.log(warpDB);
+    });
+}
+
+function warpDel(playerName: string, warpName: string){
+    let originXuid = connectionList.nXXid.get(playerName);
+    let dbObject = warpDB.find((obj: { xuid: string; }) => obj.xuid == originXuid);
+
+    if (dbObject != undefined){
+        let warpObject = dbObject.warp.find((obj: { name: string; }) => obj.name == warpName);
+        let dbIndex = warpDB.indexOf(dbObject);
+
+        if (warpObject != undefined){
+            let warpIndex: number = warpDB[dbIndex].warp.indexOf(warpObject);
+            warpDB[dbIndex].warp.splice(warpIndex, 1);
+            console.log(JSON.stringify(warpDB[dbIndex].warp));
+            tellRaw(playerName, '§e§l[WARP LIST]');
+            tellRaw(playerName, `§eDeleted §3§o${warpObject.name}§r§e\n[§f${DimensionId[warpObject.dimId]} §e@ §4${warpObject.x.toFixed(1)} §a${warpObject.y.toFixed(1)} §9${warpObject.z.toFixed(1)}§e]`);
+            tellRaw(playerName, '§e§l* * * * * * *');
+        } else {
+            tellRaw(playerName, '§e§l[WARP LIST]');
+            tellRaw(playerName, `§eNo warp called: §3§o${warpName}`);
+            tellRaw(playerName, '§e§l* * * * * * *');
+        }
+
+    } else {
+        tellRaw(playerName, '§e§l[WARP LIST]');
+        tellRaw(playerName, '§c0 §gWarp points set');
+        tellRaw(playerName, '§e§l* * * * * * *');
+    }
+}
+
+function warpTo(playerName: string, warpName: string){
+    let originXuid = connectionList.nXXid.get(playerName);
+    let dbObject = warpDB.find((obj: { xuid: string; }) => obj.xuid == originXuid);
+
+    if (dbObject != undefined){
+        let warpObject = dbObject.warp.find((obj: { name: string; }) => obj.name == warpName);
+
+        if (warpObject != undefined){
+            tdTeleport(playerName, warpObject.dimId, warpObject.x, warpObject.y, warpObject.z);
+            tellRaw(playerName,`§2${playerName} §gwarped to §4${warpName}§g:\n§4${DimensionId[warpObject.dim]} §g@ §4${warpObject.x}§g, §4${warpObject.y}§g, §4${warpObject.z}`);
+
+        } else {
+            tellRaw(playerName,`§2${playerName} §ghas no warp called: §4${warpName}`);
+        }
+
+    } else {
+        tellRaw(playerName, `§2${playerName} §ghas §40 §gwarps set`);
+    }
+}
+
 
 // Database Entry Classes
 class PlayerDBEntry {
