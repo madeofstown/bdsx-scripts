@@ -7,6 +7,7 @@ import { tdTeleport } from './tdtp';    /* found @ https://github.com/randommous
 let dbFile = "warplist.json";
 let warpDB: any = []
 let system = server.registerSystem(0,0);
+let homename: string = '§5HOME§r';
 
 // Load Database File on Server Start
 fs.readFile(dbFile, (err, data: any) =>{
@@ -32,13 +33,11 @@ bedrockServer.close.on(() => {
 command.hook.on((cmdString: string, originName: any) =>{
     // /sethome
     if (cmdString.startsWith('/sethome')){
-        let warpName: string = '.home'
-        warpSet(originName, warpName);
+        warpSet(originName, homename);
     }
     // /home
     if (cmdString.startsWith('/home')){
-        let warpName: string = '.home'
-        warpTo(originName, warpName)
+        warpTo(originName, homename)
     }
     // /warp set <warpName>
     if (cmdString.startsWith('/warp set')) {
@@ -112,7 +111,11 @@ function warpSet(playerName: string, warpName: string){
             tellRaw(playerName, '§e§l[WARP LIST]');
             tellRaw(playerName, `§eSet §3§o${warpName}§r§e\n    [§f${DimensionId[dimId]} §e@ §4${xPos.toFixed(1)} §a${yPos.toFixed(1)} §9${zPos.toFixed(1)}§e]`);
             tellRaw(playerName, '§e§l* * * * * * *');
+            if (warpName == homename){
+                warpDB[dbIndex].warp.unshift(warpEntry);
+            } else {
             warpDB[dbIndex].warp.push(warpEntry);
+            }
         }
 
     } else {
