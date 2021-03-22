@@ -1,10 +1,12 @@
 
 import { bedrockServer, command, DimensionId } from 'bdsx';
+import { FormButton, SimpleForm } from 'bdsx/bds/form';
 import fs = require('fs');
 import { connectionList } from './playerlist';  /* found @ https://github.com/randommouse/bdsx-scripts/blob/bdsx2/playerlist.ts */
 import { tdTeleport } from './tdtp';    /* found @ https://github.com/randommouse/bdsx-scripts/blob/bdsx2/tdtp.ts */
 
-let dbFile = "warplist.json";
+let warpListGUI: boolean = true; //if 'true', uses a form-based GUI for '/warp list' command response
+let dbFile = "warplist.json";   //database file location
 let warpDB: any = []
 let system = server.registerSystem(0,0);
 let homename: string = '§5HOME§r';
@@ -56,7 +58,11 @@ command.hook.on((cmdString: string, originName: any) =>{
     }
     // /warp list
     if (cmdString == '/warp list'){
-        warpList(originName);
+        if (warpListGUI == true) {
+        warpListForm(originName);
+        } else {
+            warpList(originName);
+        }
     }
 });
 
@@ -209,6 +215,21 @@ function warpList(playerName: string){
     }
 }
 
+function warpListForm(playerName: string) {
+    let playerXuid = connectionList.nXXid.get(playerName);
+    let playerNetID = connectionList.nXNet.get(playerName);
+    let dbObject = warpDB.find((obj: { xuid: string; }) => obj.xuid == playerXuid);
+    let warpListForm = new SimpleForm('§0§l[WARP LIST]')
+    for (let i = 0; i < dbObject.warp.length; i++) {
+        warpListForm.addButton(new FormButton(`§1§o${dbObject.warp[i].name}§r§8\n[§0${DimensionId[dbObject.warp[i].dimId]} §8@ §4${dbObject.warp[i].x.toFixed(1)} §2${dbObject.warp[i].y.toFixed(1)} §9${dbObject.warp[i].z.toFixed(1)}§8]`));
+    }
+    warpListForm.sendTo(playerNetID, (data, playerNetID) => {
+        if (data.response !== undefined){
+        console.log(data.response);
+        warpTo(playerName, dbObject.warp[data.response].name);
+        }
+    })
+}
 
 // Database Entry Classes
 class PlayerDBEntry {
