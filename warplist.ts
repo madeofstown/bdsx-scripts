@@ -220,15 +220,22 @@ function warpListForm(playerName: string) {
     let playerNetID = connectionList.nXNet.get(playerName);
     let dbObject = warpDB.find((obj: { xuid: string; }) => obj.xuid == playerXuid);
     let warpListForm = new SimpleForm('§0§l[WARP LIST]')
-    for (let i = 0; i < dbObject.warp.length; i++) {
-        warpListForm.addButton(new FormButton(`§1§o${dbObject.warp[i].name}§r§8\n[§0${DimensionId[dbObject.warp[i].dimId]} §8@ §4${dbObject.warp[i].x.toFixed(1)} §2${dbObject.warp[i].y.toFixed(1)} §9${dbObject.warp[i].z.toFixed(1)}§8]`));
-    }
-    warpListForm.sendTo(playerNetID, (data, playerNetID) => {
-        if (data.response !== undefined){
-        console.log(data.response);
-        warpTo(playerName, dbObject.warp[data.response].name);
+
+    if (dbObject.warp.length > 0) {
+        for (let i = 0; i < dbObject.warp.length; i++) {
+            warpListForm.addButton(new FormButton(`§1§o${dbObject.warp[i].name}§r§8\n[§0${DimensionId[dbObject.warp[i].dimId]} §8@ §4${dbObject.warp[i].x.toFixed(1)} §2${dbObject.warp[i].y.toFixed(1)} §9${dbObject.warp[i].z.toFixed(1)}§8]`));
         }
-    })
+        warpListForm.sendTo(playerNetID, (data, playerNetID) => {
+            if (data.response !== undefined){
+            console.log(data.response);
+            warpTo(playerName, dbObject.warp[data.response].name);
+            }
+        })
+    } else {
+        tellRaw(playerName, '§e§l[WARP LIST]');
+        tellRaw(playerName, '§c0 §gWarp points set');
+        tellRaw(playerName, '§e§l* * * * * * *');
+    }
 }
 
 // Database Entry Classes
