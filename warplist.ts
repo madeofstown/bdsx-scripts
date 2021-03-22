@@ -35,7 +35,7 @@ bedrockServer.close.on(() => {
 let first: string = '<§eset§f | §edel§f | §etp§f | §elist§f >';
 let second: string = '<warpName>';
 command.register('warp', 'Your personal Warp Points').override(_param=>{
-},[first, CxxString ], [second, CxxString]);
+},[first, CxxString ], [second, CxxString, 'secondIsSet']);
 command.register('warp set', '§eSet§7 a Warp Point');
 command.register('warp del', '§eDelete§7 a Warp Point');
 command.register('warp tp', '§eTeleport§7 to a Warp Point');
@@ -112,23 +112,20 @@ function warpSet(playerName: string, warpName: string){
     let zPos = originPosition!.data.z;
     let dbObject = warpDB.find((obj: { xuid: string; }) => obj.xuid == originXuid);
     let warpEntry = new WarpDBEntry(warpName, dimId, xPos, yPos, zPos);
-    if (warpName != undefined) {
+    if (warpName != undefined && warpName != '' && warpName != null ) {
+        tellRaw(playerName, '§e§l[WARP LIST]');
         if (dbObject != undefined){
             let dbIndex = warpDB.indexOf(dbObject);
             let warpObject = dbObject.warp.find((obj: { name: string; }) => obj.name == warpName);
 
             if (warpObject != undefined){
-                tellRaw(playerName, '§e§l[WARP LIST]');
                 tellRaw(playerName, `§eExisting §3§o${warpObject.name}§r§e\n    [§f${DimensionId[warpObject.dimId]} §e@ §4${warpObject.x.toFixed(1)} §a${warpObject.y.toFixed(1)} §9${warpObject.z.toFixed(1)}§e]`);
                 tellRaw(playerName, `§cOverwriting §3§o${warpName}§r§e\n    [§f${DimensionId[dimId]} §e@ §4${xPos.toFixed(1)} §a${yPos.toFixed(1)} §9${zPos.toFixed(1)}§e]`);
-                tellRaw(playerName, '§e§l* * * * * * *');
                 let warpIndex = warpDB[dbIndex].warp.indexOf(warpObject);
                 warpDB[dbIndex].warp[warpIndex] = warpEntry;
 
             } else {
-                tellRaw(playerName, '§e§l[WARP LIST]');
                 tellRaw(playerName, `§eSet §3§o${warpName}§r§e\n    [§f${DimensionId[dimId]} §e@ §4${xPos.toFixed(1)} §a${yPos.toFixed(1)} §9${zPos.toFixed(1)}§e]`);
-                tellRaw(playerName, '§e§l* * * * * * *');
                 if (warpName == homename){
                     warpDB[dbIndex].warp.unshift(warpEntry);
                 } else {
@@ -137,13 +134,12 @@ function warpSet(playerName: string, warpName: string){
             }
 
         } else {
-            tellRaw(playerName, '§e§l[WARP LIST]');
             tellRaw(playerName, `§eSet §3§o${warpName}§r§e\n    [§f${DimensionId[dimId]} §e@ §4${xPos.toFixed(1)} §a${yPos.toFixed(1)} §9${zPos.toFixed(1)}§e]`);
-            tellRaw(playerName, '§e§l* * * * * * *');
             let playerEntry = new PlayerDBEntry(originXuid, playerName);
             playerEntry.addWarp(warpName, dimId, xPos, yPos, xPos);
             warpDB.push(playerEntry);
         }
+        tellRaw(playerName, '§e§l* * * * * * *');
         // Save warpDB to dbFile
         saveToFile();
     }
@@ -153,57 +149,52 @@ function warpDel(playerName: string, warpName: string){
     let originXuid = connectionList.nXXid.get(playerName);
     let dbObject = warpDB.find((obj: { xuid: string; }) => obj.xuid == originXuid);
 
-    if (dbObject != undefined){
-        let warpObject = dbObject.warp.find((obj: { name: string; }) => obj.name == warpName);
-        let dbIndex = warpDB.indexOf(dbObject);
+    if (warpName != undefined && warpName != '' && warpName != null ) {
+        tellRaw(playerName, '§e§l[WARP LIST]');
+        if (dbObject != undefined){
+            let warpObject = dbObject.warp.find((obj: { name: string; }) => obj.name == warpName);
+            let dbIndex = warpDB.indexOf(dbObject);
 
-        if (warpObject != undefined){
-            let warpIndex: number = warpDB[dbIndex].warp.indexOf(warpObject);
-            warpDB[dbIndex].warp.splice(warpIndex, 1);
-            tellRaw(playerName, '§e§l[WARP LIST]');
-            tellRaw(playerName, `§eDeleted §3§o${warpObject.name}§r§e\n    [§f${DimensionId[warpObject.dimId]} §e@ §4${warpObject.x.toFixed(1)} §a${warpObject.y.toFixed(1)} §9${warpObject.z.toFixed(1)}§e]`);
-            tellRaw(playerName, '§e§l* * * * * * *');
+            if (warpObject != undefined){
+                let warpIndex: number = warpDB[dbIndex].warp.indexOf(warpObject);
+                warpDB[dbIndex].warp.splice(warpIndex, 1);
+                tellRaw(playerName, `§eDeleted §3§o${warpObject.name}§r§e\n    [§f${DimensionId[warpObject.dimId]} §e@ §4${warpObject.x.toFixed(1)} §a${warpObject.y.toFixed(1)} §9${warpObject.z.toFixed(1)}§e]`);
+
+            } else {
+                tellRaw(playerName, `§eNo warp called: §3§o${warpName}`);
+            }
 
         } else {
-            tellRaw(playerName, '§e§l[WARP LIST]');
-            tellRaw(playerName, `§eNo warp called: §3§o${warpName}`);
-            tellRaw(playerName, '§e§l* * * * * * *');
+            tellRaw(playerName, '§c0 §gWarp points set');
         }
-
-    } else {
-        tellRaw(playerName, '§e§l[WARP LIST]');
-        tellRaw(playerName, '§c0 §gWarp points set');
         tellRaw(playerName, '§e§l* * * * * * *');
+        // Save warpDB to dbFile
+        saveToFile();
     }
-    // Save warpDB to dbFile
-    saveToFile();
 }
 
 function warpTo(playerName: string, warpName: string){
     let originXuid = connectionList.nXXid.get(playerName);
     let dbObject = warpDB.find((obj: { xuid: string; }) => obj.xuid == originXuid);
 
-    if (dbObject != undefined){
-        let warpObject = dbObject.warp.find((obj: { name: string; }) => obj.name == warpName);
+    if (warpName != undefined && warpName != '' && warpName != null ) {
+        tellRaw(playerName, '§e§l[WARP LIST]');
+        if (dbObject != undefined){
+            let warpObject = dbObject.warp.find((obj: { name: string; }) => obj.name == warpName);
 
-        if (warpObject != undefined){
-            tdTeleport(playerName, warpObject.dimId, warpObject.x, warpObject.y, warpObject.z);
-            tellRaw(playerName, '§e§l[WARP LIST]');
-            tellRaw(playerName, `§eWarped to §3§o${warpObject.name}§r§e\n    [§f${DimensionId[warpObject.dimId]} §e@ §4${warpObject.x.toFixed(1)} §a${warpObject.y.toFixed(1)} §9${warpObject.z.toFixed(1)}§e]`);
-            tellRaw(playerName, '§e§l* * * * * * *');
+            if (warpObject != undefined){
+                tdTeleport(playerName, warpObject.dimId, warpObject.x, warpObject.y, warpObject.z);
+                tellRaw(playerName, `§eWarped to §3§o${warpObject.name}§r§e\n    [§f${DimensionId[warpObject.dimId]} §e@ §4${warpObject.x.toFixed(1)} §a${warpObject.y.toFixed(1)} §9${warpObject.z.toFixed(1)}§e]`);
+
+            } else {
+                tellRaw(playerName, `§eNo warp called: §3§o${warpName}`);
+            }
 
         } else {
-            tellRaw(playerName, '§e§l[WARP LIST]');
-            tellRaw(playerName, `§eNo warp called: §3§o${warpName}`);
-            tellRaw(playerName, '§e§l* * * * * * *');
+            tellRaw(playerName, '§c0 §gWarp points set');
         }
-
-    } else {
-        tellRaw(playerName, '§e§l[WARP LIST]');
-        tellRaw(playerName, '§c0 §gWarp points set');
         tellRaw(playerName, '§e§l* * * * * * *');
     }
-
 }
 
 function warpList(playerName: string){
