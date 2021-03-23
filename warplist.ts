@@ -32,16 +32,17 @@ bedrockServer.close.on(() => {
 });
 
 // Register Commands
-let first: string = '<§eset§f | §edel§f | §etp§f | §elist§f >';
+let first: string = '<set | del | tp | list>';
 let second: string = '<warpName>';
-command.register('warp', 'Your personal Warp Points').override(_param=>{
-},[first, CxxString ], [second, CxxString, 'secondIsSet']);
-command.register('warp set', '§eSet§7 a Warp Point');
-command.register('warp del', '§eDelete§7 a Warp Point');
-command.register('warp tp', '§eTeleport§7 to a Warp Point');
-command.register('warp list', '§eList§7 your Warp Points');
-command.register('sethome', `§eSet§7 your ${homename}§r§o§7 Warp Point`);
-command.register('home', `§eTeleport§7 to your ${homename}§r§o§7 Warp Point `);
+command.register('warp', 'Set, Delete, List, or Teleport to Warp Points.').override(_param=>{
+},[first, CxxString, 'firstIsSet' ], [second, CxxString, 'secondIsSet']);
+command.register('warp set', '§eSet§7 a Warp Point.');
+command.register('warp del', '§eDelete§7 a Warp Point.');
+command.register('warp tp', '§eTeleport§7 to a Warp Point.');
+command.register('warp list', '§eList§7 your Warp Points.');
+command.register('sethome', `§eSet§7 your ${homename}§r§o§7 Warp Point.`);
+command.register('home', `§eTeleport§7 to your ${homename}§r§o§7 Warp Point.`);
+
 
 
 // Hook Commands
@@ -49,25 +50,30 @@ command.hook.on((cmdString: string, originName: any) =>{
     // /sethome
     if (cmdString == '/sethome'){
         warpSet(originName, homename);
+        return 1
     }
     // /home
     if (cmdString == '/home'){
         warpTo(originName, homename)
+        return 1
     }
     // /warp set <warpName>
     if (cmdString.startsWith('/warp set')) {
         let warpName: string = splitAfter(cmdString, 2).replace(/^['"]|['"]$/g, '');
         warpSet(originName, warpName);
+        return 1
     }
     // /warp tp <warpName>
     if (cmdString.startsWith('/warp tp')) {
         let warpName: string = splitAfter(cmdString, 2).replace(/^['"]|['"]$/g, '');
         warpTo(originName, warpName);
+        return 1
     }
     // /warp del <warpName>
     if (cmdString.startsWith('/warp del')) {
         let warpName: string = splitAfter(cmdString, 2).replace(/^['"]|['"]$/g, '');
         warpDel(originName, warpName);
+        return 1
     }
     // /warp list
     if (cmdString == '/warp list'){
@@ -76,7 +82,9 @@ command.hook.on((cmdString: string, originName: any) =>{
         } else {
             warpList(originName);
         }
+        return 1
     }
+
 });
 
 // Functions
