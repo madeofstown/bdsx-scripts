@@ -45,35 +45,35 @@ command.register('home', `§eTeleport§7 to your ${homename}§r§o§7 Warp Point
 
 
 
-// Hook Commands
+// Hook and Process Commands
 command.hook.on((cmdString: string, originName: any) =>{
     // /sethome
     if (cmdString == '/sethome'){
         warpSet(originName, homename);
-        return 1
+        return 1;    // MCRESULT_Success
     }
     // /home
     if (cmdString == '/home'){
-        warpTo(originName, homename)
-        return 1
+        warpTo(originName, homename);
+        return 1;    // MCRESULT_Success
     }
     // /warp set <warpName>
     if (cmdString.startsWith('/warp set')) {
         let warpName: string = splitAfter(cmdString, 2).replace(/^['"]|['"]$/g, '');
         warpSet(originName, warpName);
-        return 1
+        return 1;    // MCRESULT_Success
     }
     // /warp tp <warpName>
     if (cmdString.startsWith('/warp tp')) {
         let warpName: string = splitAfter(cmdString, 2).replace(/^['"]|['"]$/g, '');
         warpTo(originName, warpName);
-        return 1
+        return 1;    // MCRESULT_Success
     }
     // /warp del <warpName>
     if (cmdString.startsWith('/warp del')) {
         let warpName: string = splitAfter(cmdString, 2).replace(/^['"]|['"]$/g, '');
         warpDel(originName, warpName);
-        return 1
+        return 1;    // MCRESULT_Success
     }
     // /warp list
     if (cmdString == '/warp list'){
@@ -82,7 +82,7 @@ command.hook.on((cmdString: string, originName: any) =>{
         } else {
             warpList(originName);
         }
-        return 1
+        return 1;    // MCRESULT_Success
     }
 
 });
@@ -209,8 +209,8 @@ function warpList(playerName: string){
     let originXuid = connectionList.nXXid.get(playerName);
     let dbObject = warpDB.find((obj: { xuid: string; }) => obj.xuid == originXuid);
 
+    tellRaw(playerName, '§e§l[WARP LIST]');
     if (dbObject != undefined){
-        tellRaw(playerName, '§e§l[WARP LIST]');
         if (dbObject.warp.length > 0){
             for (let i = 0; i < dbObject.warp.length; i++) {
                 tellRaw(playerName , `§e[${i + 1}] §3§o${dbObject.warp[i].name}§r§e\n    [§f${DimensionId[dbObject.warp[i].dimId]} §e@ §4${dbObject.warp[i].x.toFixed(1)} §a${dbObject.warp[i].y.toFixed(1)} §9${dbObject.warp[i].z.toFixed(1)}§e]`);
@@ -219,13 +219,11 @@ function warpList(playerName: string){
         } else {
             tellRaw(playerName, '§c0 §gWarp points set');
         }
-        tellRaw(playerName, '§e§l* * * * * * *');
 
     } else {
-        tellRaw(playerName, '§e§l[WARP LIST]');
         tellRaw(playerName, '§c0 §gWarp points set');
-        tellRaw(playerName, '§e§l* * * * * * *');
     }
+    tellRaw(playerName, '§e§l* * * * * * *');
 }
 
 function warpListForm(playerName: string) {
