@@ -32,60 +32,40 @@ bedrockServer.close.on(() => {
 });
 
 // Register Commands
-let first: string = '<set | del | tp | list>';
-let second: string = '<warpName>';
-command.register('warp', 'Set, Delete, List, or Teleport to Warp Points.').override(_param=>{
-},[first, CxxString, 'firstIsSet' ], [second, CxxString, 'secondIsSet']);
-command.register('warp set', '§eSet§7 a Warp Point.');
-command.register('warp del', '§eDelete§7 a Warp Point.');
-command.register('warp tp', '§eTeleport§7 to a Warp Point.');
-command.register('warp list', '§eList§7 your Warp Points.');
-command.register('sethome', `§eSet§7 your ${homename}§r§o§7 Warp Point.`);
-command.register('home', `§eTeleport§7 to your ${homename}§r§o§7 Warp Point.`);
-
-
-
-// Hook and Process Commands
-command.hook.on((cmdString: string, originName: any) =>{
-    // /sethome
-    if (cmdString == '/sethome'){
-        warpSet(originName, homename);
-        return 1;    // MCRESULT_Success
-    }
-    // /home
-    if (cmdString == '/home'){
-        warpTo(originName, homename);
-        return 1;    // MCRESULT_Success
-    }
-    // /warp set <warpName>
-    if (cmdString.startsWith('/warp set')) {
-        let warpName: string = splitAfter(cmdString, 2).replace(/^['"]|['"]$/g, '');
-        warpSet(originName, warpName);
-        return 1;    // MCRESULT_Success
-    }
-    // /warp tp <warpName>
-    if (cmdString.startsWith('/warp tp')) {
-        let warpName: string = splitAfter(cmdString, 2).replace(/^['"]|['"]$/g, '');
-        warpTo(originName, warpName);
-        return 1;    // MCRESULT_Success
-    }
-    // /warp del <warpName>
-    if (cmdString.startsWith('/warp del')) {
-        let warpName: string = splitAfter(cmdString, 2).replace(/^['"]|['"]$/g, '');
-        warpDel(originName, warpName);
-        return 1;    // MCRESULT_Success
-    }
+command.register('warp', 'Set, Delete, List, or Teleport to Warp Points.').overload((param, origin, output)=>{
+    let playerName = origin.getName();
     // /warp list
-    if (cmdString == '/warp list'){
+    if (param.warpCmd == 'list'){
         if (warpListGUI == true) {
-        warpListForm(originName);
+            warpListForm(playerName);
         } else {
-            warpList(originName);
+            warpList(playerName);
         }
-        return 1;    // MCRESULT_Success
     }
+    // /warp set "warpName" (use "" if name includes spaces)
+    if (param.warpCmd == 'set' && param.warpName !== undefined){ warpSet(playerName, param.warpName) };
+    // /warp del "warpName" (use "" if name includes spaces)
+    if (param.warpCmd == 'del' && param.warpName !== undefined){ warpDel(playerName, param.warpName) };
+    // /warp to "warpName" (use "" if name includes spaces)
+    if (param.warpCmd == 'to' && param.warpName !== undefined){ warpTo(playerName, param.warpName) };
 
-});
+}, {warpCmd: CxxString, warpName: [CxxString, true]});
+
+command.register('warp set', '§eSet§7 a Warp Point.');
+
+command.register('warp del', '§eDelete§7 a Warp Point.');
+
+command.register('warp to', '§eTeleport§7 to a Warp Point.');
+
+command.register('warp list', '§eList§7 your Warp Points.');
+// /sethome
+command.register('sethome', `§eSet§7 your ${homename}§r§o§7 Warp Point.`).overload((param, origin, output)=>{
+    warpSet(origin.getName(), homename);
+},{});
+// /home
+command.register('home', `§eTeleport§7 to your ${homename}§r§o§7 Warp Point.`).overload((param, origin, output)=>{
+    warpTo(origin.getName(), homename);
+},{});;
 
 // Functions
 function tellRaw(playerName: string, text: string){
@@ -97,16 +77,6 @@ function saveToFile(dbObject: object = warpDB, file: string = dbFile){
     fs.writeFile(file, filedata, () => {
         console.log('[WARP LIST] Database ' + dbFile + ' SAVED');
     });
-}
-
-function splitAfter(string: string, index: number, separator: string = ' '){
-    let stringSplit = string.split(separator);
-    let stringArray = [];
-    for (let i = index; i < stringSplit.length; i++){
-        stringArray.push(stringSplit[i])
-    }
-    let stringNew: string = stringArray.join(separator);
-    return stringNew
 }
 
 function warpSet(playerName: string, warpName: string){
@@ -143,9 +113,7 @@ function warpSet(playerName: string, warpName: string){
 
         } else {
             tellRaw(playerName, `§eSet §3§o${warpName}§r§e\n    [§f${DimensionId[dimId]} §e@ §4${xPos.toFixed(1)} §a${yPos.toFixed(1)} §9${zPos.toFixed(1)}§e]`);
-            let playerEntry = new PlayerDBEntry(originXuid, playerName);
-            playerEntry.addWarp(warpName, dimId, xPos, yPos, xPos);
-            warpDB.push(playerEntry);
+            warpDB.push(new PlayerDBEntry(originXuid, playerName, warpEntry));
         }
         tellRaw(playerName, '§e§l* * * * * * *');
         // Save warpDB to dbFile
@@ -232,16 +200,22 @@ function warpListForm(playerName: string) {
     let dbObject = warpDB.find((obj: { xuid: string; }) => obj.xuid == playerXuid);
     let warpListForm = new SimpleForm('§0§l[WARP LIST]')
 
-    if (dbObject.warp.length > 0) {
-        for (let i = 0; i < dbObject.warp.length; i++) {
-            warpListForm.addButton(new FormButton(`§1§o${dbObject.warp[i].name}§r§8\n[§0${DimensionId[dbObject.warp[i].dimId]} §8@ §4${dbObject.warp[i].x.toFixed(1)} §2${dbObject.warp[i].y.toFixed(1)} §9${dbObject.warp[i].z.toFixed(1)}§8]`));
-        }
-        warpListForm.sendTo(playerNetID, (data, playerNetID) => {
-            if (data.response !== undefined){
-            console.log(data.response);
-            warpTo(playerName, dbObject.warp[data.response].name);
+    if (dbObject != undefined) {
+        if (dbObject.warp.length >= 0) {
+            for (let i = 0; i < dbObject.warp.length; i++) {
+                warpListForm.addButton(new FormButton(`§1§o${dbObject.warp[i].name}§r§8\n[§0${DimensionId[dbObject.warp[i].dimId]} §8@ §4${dbObject.warp[i].x.toFixed(1)} §2${dbObject.warp[i].y.toFixed(1)} §9${dbObject.warp[i].z.toFixed(1)}§8]`));
             }
-        })
+            warpListForm.sendTo(playerNetID, (data, playerNetID) => {
+                if (data.response !== undefined && data.response !== null){
+                warpTo(playerName, dbObject.warp[data.response].name);
+                }
+            })
+        } else {
+            tellRaw(playerName, '§e§l[WARP LIST]');
+            tellRaw(playerName, '§c0 §gWarp points set');
+            tellRaw(playerName, '§e§l* * * * * * *');
+        }
+
     } else {
         tellRaw(playerName, '§e§l[WARP LIST]');
         tellRaw(playerName, '§c0 §gWarp points set');
@@ -251,28 +225,21 @@ function warpListForm(playerName: string) {
 
 // Database Entry Classes
 class PlayerDBEntry {
-    [key: string]: any
-    constructor(xuid: string, name: string){
+    xuid: string;
+    name: string;
+    warp: WarpDBEntry;
+    constructor(xuid: string, name: string, warp?: WarpDBEntry ){
         this.xuid = xuid;
         this.name = name;
         this.warp = [];
-    }
-    addWarp(name: string, dimensionId: number, xPos: number, yPos: number, zPos: number){
-        let content: {[key: string]: any} = {
-            name: name,
-            dimId: dimensionId,
-            x: xPos,
-            y: yPos,
-            z: zPos
-        }
-        this.warp.push(content);
+        if (warp != undefined){this.warp.push(warp)}
     }
 }
 
 class WarpDBEntry {
     [key: string]: any
-    constructor(name: string, dimensionId: number, xPos: number, yPos: number, zPos: number){
-        this.name = name;
+    constructor(warpName: string, dimensionId: number, xPos: number, yPos: number, zPos: number){
+        this.name = warpName;
         this.dimId = dimensionId;
         this.x = xPos;
         this.y = yPos;
